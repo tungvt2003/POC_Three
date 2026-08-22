@@ -1,0 +1,766 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  background: #16161a;
+  color: #eee;
+}
+
+/* Sidebar wizard trái + khung xem lớn phải */
+.app {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: #d7d7db;
+}
+
+.stage canvas {
+  display: block;
+  touch-action: none; /* cần cho Pointer Events: chặn trình duyệt cuộn/zoom thay */
+}
+
+/* ---------- wizard ---------- */
+
+.wiz {
+  display: flex;
+  flex-direction: column;
+  width: 330px;
+  flex-shrink: 0;
+  border-right: 1px solid #2c2c34;
+  background: #1c1c22;
+}
+
+.wiz-head {
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid #2c2c34;
+}
+
+.wiz-step {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d8a53c;
+}
+
+/* Dải bước bấm được — nhảy thẳng tới bước bất kỳ */
+.steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.step-dot {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #3a3a42;
+  border-radius: 999px;
+  background: #24242b;
+  color: #8a8a99;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.step-dot:hover {
+  background: #2e2e37;
+  color: #c9c9d6;
+}
+
+.step-dot.is-on {
+  border-color: transparent;
+  background: #d8a53c;
+  color: #201a0c;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  background: #24242b;
+  color: #eee;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-btn:hover {
+  background: #2e2e37;
+  border-color: #4a4a55;
+}
+
+.row-btn em {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 11px;
+  color: #8a8a99;
+}
+
+.wiz-head h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.wiz-hint {
+  margin: 8px 0 0;
+  color: #8a8a99;
+  line-height: 1.45;
+}
+
+.wiz-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 22px 24px;
+}
+
+.wiz-foot {
+  display: flex;
+  gap: 8px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid #2c2c34;
+}
+
+.btn {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid #3a3a42;
+  border-radius: 999px;
+  background: #24242b;
+  color: #eee;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #2e2e37;
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: #d8a53c;
+  color: #201a0c;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #e8b955;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.wiz-body h3 {
+  margin: 20px 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a8a99;
+}
+
+.wiz-body h3:first-child {
+  margin-top: 0;
+}
+
+.note {
+  margin: 0 0 14px;
+  color: #8a8a99;
+  line-height: 1.5;
+}
+
+.note code {
+  color: #c9c9d6;
+}
+
+/* ---------- bước 1: chọn hình ---------- */
+
+.shape-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.shape-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 11px;
+  border: 1px solid #3a3a42;
+  border-radius: 10px;
+  background: #24242b;
+  color: #b9b9c6;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.shape-card:hover {
+  background: #2e2e37;
+}
+
+.shape-card.is-on {
+  border-color: #d8a53c;
+  background: #2f2a20;
+  color: #f0c76a;
+}
+
+.thumb-poly {
+  fill: currentColor;
+  fill-opacity: 0.22;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+/* ---------- bước 2: số đo ---------- */
+
+.seg {
+  display: flex;
+  margin-bottom: 14px;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg button {
+  flex: 1;
+  padding: 8px;
+  border: 0;
+  background: #24242b;
+  color: #b9b9c6;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.seg button.is-on {
+  background: #d8a53c;
+  color: #201a0c;
+  font-weight: 600;
+}
+
+.edges {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.edges li {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: #b9b9c6;
+}
+
+.edges li b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #eee;
+}
+
+.edges li.is-derived {
+  color: #6e6e7c;
+  font-style: italic;
+}
+
+.edges li.is-sel {
+  background: #2f2a20;
+  color: #f0c76a;
+}
+
+.field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+  color: #b9b9c6;
+}
+
+.field-head b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #eee;
+}
+
+.field-head em {
+  font-style: normal;
+  color: #6e6e7c;
+}
+
+.field input[type='range'] {
+  width: 100%;
+  accent-color: #d8a53c;
+}
+
+.field input[type='number'] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #3a3a42;
+  border-radius: 7px;
+  background: #24242b;
+  color: #eee;
+  font-size: 13px;
+}
+
+/* ---------- bước 3: cửa & cửa sổ ---------- */
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.style-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 4px 7px;
+  border: 1px solid #3a3a42;
+  border-radius: 9px;
+  background: #24242b;
+  color: #b9b9c6;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.style-card:hover {
+  background: #2e2e37;
+}
+
+.style-card.is-on {
+  border-color: #d8a53c;
+  background: #2f2a20;
+  color: #f0c76a;
+}
+
+.pane-solid {
+  fill: #cfcabf;
+  stroke: #6a6a76;
+  stroke-width: 1.5;
+}
+
+.pane-glass {
+  fill: #8fb3c4;
+  fill-opacity: 0.6;
+  stroke: #6a6a76;
+  stroke-width: 1.5;
+}
+
+.pane-mullion line {
+  stroke: #6a6a76;
+  stroke-width: 1.2;
+}
+
+.pane-stile {
+  stroke: #4c4c58;
+  stroke-width: 2.4;
+}
+
+.sel-card {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #d8a53c;
+  border-radius: 10px;
+  background: #2b2618;
+}
+
+.sel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sel-head b {
+  color: #f0c76a;
+}
+
+.icon-btn {
+  padding: 4px 10px;
+  border: 1px solid #5a4a3a;
+  border-radius: 6px;
+  background: #3a2f22;
+  color: #f0c76a;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: #4a3b28;
+}
+
+.sel-done {
+  margin-top: 4px;
+}
+
+.rotate-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.rotate-row .icon-btn {
+  flex: 1;
+  padding: 6px 2px;
+  font-size: 11px;
+}
+
+/* ---------- lớp phủ đo & kéo, nằm đè lên ảnh 3D ---------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  /* Chỉ mấy vạch bắt chuột mới ăn sự kiện, phần còn lại cho lọt xuống canvas */
+  pointer-events: none;
+}
+
+.overlay .plan-hit {
+  pointer-events: stroke;
+}
+
+/*
+  Nét MẢNH có chủ ý. Nét dày bằng cả bề dày tường thì nó phủ kín mặt trên
+  tường, không còn thấy tường đâu — chỉ thấy một sợi dây đen.
+*/
+.plan-wall {
+  stroke: #14141c;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* Tường đang trỏ / đang kéo tô vàng — như sản phẩm tham chiếu */
+.plan-wall.is-on {
+  stroke: #e39a1f;
+  stroke-width: 5;
+}
+
+/* Vạch bắt chuột: rộng hơn nét vẽ nhiều nên dễ tóm, nhưng vô hình */
+.plan-hit {
+  stroke: transparent;
+  stroke-width: 22;
+  stroke-linecap: round;
+}
+
+.plan-vertex {
+  fill: #fff;
+  stroke: #14141c;
+  stroke-width: 1.6;
+  pointer-events: none;
+}
+
+.plan-dim {
+  pointer-events: none;
+}
+
+.plan-dim line {
+  stroke: #83838f;
+  stroke-width: 1;
+}
+
+/* Nền giờ sáng nên chữ đen, viền trắng để chữ không chìm khi đè lên tường */
+.plan-dim text {
+  fill: #1d1d24;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: #d7d7db;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+
+/* ---------- nhãn đường đo (thẻ DOM thật, nổi trong cảnh 3D) ---------- */
+
+.dim-label {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #f4f4f6;
+  color: #1d1d24;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  user-select: none;
+}
+
+/* Hở < 600mm: lối đi hẹp */
+.dim-label.is-narrow {
+  background: #e2564d;
+  color: #fff;
+}
+
+/* ---------- màn hình chờ tải bộ dựng 3D ---------- */
+
+.stage-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #6e6e7c;
+  font-size: 13px;
+}
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #b8b8c2;
+  border-top-color: #d8a53c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* ---------- báo trước cho màn hình nhỏ ---------- */
+
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(12, 12, 15, 0.88);
+  backdrop-filter: blur(4px);
+}
+
+.notice-card {
+  max-width: 380px;
+  padding: 24px;
+  border: 1px solid #3a3a42;
+  border-radius: 14px;
+  background: #1c1c22;
+}
+
+.notice-card h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.notice-card p {
+  margin: 0 0 12px;
+  color: #b9b9c6;
+  line-height: 1.55;
+}
+
+.notice-card .btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* ---------- bảng đo hiệu năng ---------- */
+
+.stats {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 176px;
+  padding: 10px 12px;
+  border: 1px solid #3a3a42;
+  border-radius: 9px;
+  background: rgba(22, 22, 26, 0.92);
+  color: #c9c9d6;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats hr {
+  margin: 7px 0;
+  border: 0;
+  border-top: 1px solid #33333d;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.stats-row b {
+  font-weight: 600;
+  color: #eee;
+}
+
+.stats-row b.is-good {
+  color: #6fcf7f;
+}
+
+.stats-row b.is-warn {
+  color: #e8b955;
+}
+
+.stats-row b.is-bad {
+  color: #e2564d;
+}
+
+.stats-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  border: 0;
+  background: none;
+  color: #6e6e7c;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stats-close:hover {
+  color: #eee;
+}
+
+.stats-toggle {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border: 1px solid #3a3a42;
+  border-radius: 7px;
+  background: rgba(22, 22, 26, 0.9);
+  color: #8a8a99;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- chung ---------- */
+
+.toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.toolbar button {
+  padding: 7px 12px;
+  border: 1px solid #3a3a42;
+  border-radius: 7px;
+  background: rgba(36, 36, 43, 0.9);
+  color: #eee;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toolbar button:hover:not(:disabled) {
+  background: #2e2e37;
+}
+
+.toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: 1px solid #4a4a55;
+}
+
+.swatch.is-on {
+  border-color: #d8a53c;
+}
+
+.swatch-picker {
+  background: none;
+}
+
+.floors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 11px;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  background: #24242b;
+  color: #eee;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chip.is-on {
+  border-color: #d8a53c;
+  background: #2f2a20;
+}
+
+.chip em {
+  font-style: normal;
+  font-size: 11px;
+  color: #8a8a99;
+}
