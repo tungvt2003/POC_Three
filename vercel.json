@@ -5,12 +5,10 @@
   "framework": "vite",
   "headers": [
     {
-      "comment": "Mã build có băm tên file -> đổi nội dung là đổi tên, cache vĩnh viễn an toàn",
       "source": "/build/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     },
     {
-      "comment": "Model 3D KHÔNG băm tên. Cache 1 ngày rồi hỏi lại, để thay model là người thử thấy ngay",
       "source": "/assets/models/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, must-revalidate" }]
     }

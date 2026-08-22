@@ -369,7 +369,28 @@ Nếu dùng iframe, giao thức tối thiểu:
 web -> 3D:   { type: 'catalog:update', products: [...] }
 ```
 
-### 6.6 Backend cần gì
+### 6.6 Triển khai bản thử (Vercel)
+
+Cấu hình nằm ở `vercel.json`. **JSON không có cú pháp chú thích, mà schema của
+Vercel từ chối mọi thuộc tính lạ** (kể cả `comment`), nên lý do ghi ở đây:
+
+| Đường dẫn | Cache | Vì sao |
+|---|---|---|
+| `/build/*` | 1 năm, `immutable` | Vite băm tên file — đổi nội dung là đổi tên, không bao giờ trả nhầm bản cũ |
+| `/assets/models/*` | 1 ngày, `must-revalidate` | model **không** băm tên. Cache vĩnh viễn là thay model xong người thử vẫn thấy bản cũ |
+
+Hai thư mục tách nhau nhờ `build.assetsDir = 'build'` trong `vite.config.ts`.
+Mặc định Vite đổ mã vào `dist/assets/`, trùng chỗ với `public/assets/` được
+chép sang — trộn chung thì không đặt được hai quy tắc cache khác nhau.
+
+Kèm theo:
+
+- `"engines": { "node": ">=20.19" }` — Vite 8 cần Node mới
+- Lệnh build có `tsc -b` chạy trước, nên lỗi kiểu là build fail. Cố ý.
+- Mã DEV (`window.__store`, self-check) bị `import.meta.env.DEV` loại sạch
+  khỏi bản production — đã kiểm bằng cách grep bundle.
+
+### 6.7 Backend cần gì
 
 | | |
 |---|---|
