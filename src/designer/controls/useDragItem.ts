@@ -1,14 +1,17 @@
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import { useMemo, useRef, useState } from 'react'
 import { Plane, Vector3 } from 'three'
-import { closestPointOnPolygon, pointInPolygon, type Point } from '../../lib/polygon'
+import { type Point } from '../../lib/polygon'
 import { m2mm } from '../../lib/units'
 import { useDesignStore } from '../store/designStore'
 import type { Item } from '../types'
+import { containInRoom } from './containItem'
 import { snapToWall } from './snapToWall'
 
 type Args = {
   item: Item
+  /** mm, bề rộng món đồ — cần để giữ cả khối trong phòng, không chỉ cái tâm. */
+  widthMm: number
   /** mm, chiều sâu món đồ — cần để hút sát tường cho lưng chạm tường. */
   depthMm: number
   onSelect: (id: string) => void
@@ -25,7 +28,7 @@ type Args = {
  * `closestPointOnPolygon` — hàm thuần, test được bằng số, dùng lại được cho
  * bàn phím hay ngón tay.
  */
-export function useDragItem({ item, depthMm, onSelect }: Args) {
+export function useDragItem({ item, widthMm, depthMm, onSelect }: Args) {
   const moveItem = useDesignStore((s) => s.moveItem)
   // Bản "live", KHÔNG phải `rotateItem` — cái kia chốt history ngay, kéo một
   // lần sẽ đẻ ra hàng chục bước undo.
@@ -75,19 +78,20 @@ export function useDragItem({ item, depthMm, onSelect }: Args) {
       z: p.z + grabOffset.current.z,
     }
 
-    // 1. Không cho ra ngoài phòng. `pointInPolygon` chứ không phải hộp bao —
-    //    hình L/U thì hộp bao vẫn cho kéo vào phần bị khoét.
-    if (!pointInPolygon(next, footprint)) {
-      next = closestPointOnPolygon(next, footprint)
-    }
+    // 1. Không cho ra ngoài phòng. Kẹp CẢ KHỐI chứ không phải mỗi cái tâm —
+    //    kẹp tâm thì cái sofa dài 2.2m kéo sát tường là thò một nửa ra ngoài nhà.
+    next = containInRoom(next, widthMm, depthMm, item.rotationY, footprint)
 
     // 2. Gần tường thì hút sát và xoay lưng vào tường.
     //    Thảm thì bỏ qua — thảm nằm giữa phòng là chuyện bình thường.
     if (item.placement !== 'rug') {
       const snap = snapToWall(next, depthMm, walls)
       if (snap) {
-        moveItem(item.id, snap.position)
+        // XOAY TRƯỚC rồi mới dời. `moveItem` tự kẹp món đồ vào trong phòng
+        // theo góc xoay HIỆN TẠI, nên đặt sai thứ tự là nó kẹp theo góc cũ —
+        // đứng ở góc phòng sẽ thấy đồ thò qua bức tường vuông góc.
         setItemRotation(item.id, snap.rotationY)
+        moveItem(item.id, snap.position)
         return
       }
     }

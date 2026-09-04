@@ -1,7 +1,18 @@
-import { FLOOR_MATERIALS } from '../designer/catalog/floors'
+import { floorGroups } from '../designer/catalog/floors'
+import { getFloorPreview } from '../designer/scene/floorTexture'
 import { useDesignStore } from '../designer/store/designStore'
 
-const WALL_COLORS = ['#ede7dd', '#e8e8e6', '#d6dfd8', '#dfe3ec', '#eadfd6', '#c9c4bd']
+/**
+ * Bảng màu tường. Nhóm theo tông cho dễ chọn, không phải một dãy dài lộn xộn.
+ */
+const WALL_COLORS = [
+  ['#ffffff', '#f4f1ea', '#ede7dd', '#e6e0d4', '#d8d2c6', '#c9c4bd'],
+  ['#e9eef0', '#dfe3ec', '#cfd8e3', '#b9c6d4', '#8fa3b8', '#5d7285'],
+  ['#e4ece3', '#d6dfd8', '#c2d2c3', '#a9bfab', '#7e9a83', '#4f6b55'],
+  ['#f2e7de', '#eadfd6', '#e2cdbb', '#d3b49b', '#b98d70', '#8a5f45'],
+  ['#f1e3e3', '#e6cfcf', '#d8b3b3', '#c08f8f', '#96605f', '#6d3f3f'],
+  ['#dedbe6', '#c9c3d6', '#aea5c4', '#8e83a8', '#655b80', '#3d3652'],
+]
 
 /**
  * Chọn màu tường + vật liệu sàn.
@@ -18,42 +29,57 @@ export function StylePicker() {
   return (
     <>
       <h3>Màu tường</h3>
-      <div className="swatches">
-        {WALL_COLORS.map((c) => (
-          <button
-            key={c}
-            className={'swatch' + (c === wallColor ? ' is-on' : '')}
-            style={{ background: c }}
-            title={c}
-            onClick={() => commitRoom({ wallColor: c })}
-          />
+      <div className="swatch-rows">
+        {WALL_COLORS.map((row, i) => (
+          <div className="swatches" key={i}>
+            {row.map((c) => (
+              <button
+                key={c}
+                className={'swatch' + (c === wallColor ? ' is-on' : '')}
+                style={{ background: c }}
+                title={c}
+                onClick={() => commitRoom({ wallColor: c })}
+              />
+            ))}
+          </div>
         ))}
+      </div>
+
+      <label className="custom-color">
         <input
           type="color"
-          className="swatch swatch-picker"
           value={wallColor}
           onChange={(e) => updateRoom({ wallColor: e.target.value })}
           // Bảng chọn màu của hệ điều hành bắn onChange liên tục lúc rê.
           // Đóng bảng -> blur -> chốt thành 1 bước undo.
           onBlur={endEdit}
         />
-      </div>
+        <span>Màu tự chọn</span>
+      </label>
 
       <h3>Sàn</h3>
-      <div className="floors">
-        {FLOOR_MATERIALS.map((m) => (
-          <button
-            key={m.id}
-            className={'chip' + (m.id === floorMaterialId ? ' is-on' : '')}
-            onClick={() => commitRoom({ floorMaterialId: m.id })}
-          >
-            {m.name}
-            <em>
-              {m.tile.w}×{m.tile.h}
-            </em>
-          </button>
-        ))}
-      </div>
+      {floorGroups().map(({ group, items }) => (
+        <div className="floor-group" key={group}>
+          <p className="floor-group-name">{group}</p>
+          <div className="floor-grid">
+            {items.map((m) => (
+              <button
+                key={m.id}
+                className={'floor-card' + (m.id === floorMaterialId ? ' is-on' : '')}
+                title={`${m.name} — ô ${m.tile.w}×${m.tile.h} mm`}
+                onClick={() => commitRoom({ floorMaterialId: m.id })}
+              >
+                {/*
+                  Ảnh sinh từ CHÍNH hàm vẽ texture (xem `floorTexture.ts`),
+                  nên nút bấm hiện đúng cái sẽ lát xuống sàn.
+                */}
+                <img src={getFloorPreview(m)} alt="" width={48} height={48} />
+                <span>{m.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </>
   )
 }

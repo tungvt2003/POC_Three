@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import { useMemo } from 'react'
-import { Box3, Vector3 } from 'three'
+import { Box3, Color, Vector3, type Mesh, type MeshStandardMaterial } from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 /**
@@ -17,17 +17,30 @@ import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
  *    về "tâm đáy" để mọi model đều đứng trên sàn và xoay quanh chính nó.
  *    Không làm bước này là đồ lún xuống sàn hoặc bay lơ lửng.
  */
-export function GltfModel({ url }: { url: string }) {
+export function GltfModel({ url, tint }: { url: string; tint?: string }) {
   const { scene } = useGLTF(url)
 
   const { object, offset } = useMemo(() => {
     const copy = clone(scene)
     copy.traverse((o) => {
-      // @ts-expect-error — three không hẹp kiểu Object3D xuống Mesh ở đây
-      if (o.isMesh) {
-        o.castShadow = true
-        o.receiveShadow = true
-      }
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+
+      /*
+        Đổi màu thì phải NHÂN BẢN material trước. `clone` của SkeletonUtils
+        dùng chung material giữa các bản sao — sửa màu một cái là đổi màu tất
+        cả ghế cùng loại trong phòng.
+
+        Nhân với màu gốc chứ không gán đè: giữ lại vân gỗ / vân vải của texture,
+        chỉ nhuộm tông màu lên trên. Gán đè là mất sạch chi tiết.
+      */
+      if (!tint) return
+      const source = mesh.material as MeshStandardMaterial
+      const material = source.clone()
+      material.color = new Color(tint)
+      mesh.material = material
     })
 
     const box = new Box3().setFromObject(copy)
@@ -39,7 +52,7 @@ export function GltfModel({ url }: { url: string }) {
       object: copy,
       offset: [-center.x, -box.min.y, -center.z] as [number, number, number],
     }
-  }, [scene, url])
+  }, [scene, url, tint])
 
   return <primitive object={object} position={offset} />
 }

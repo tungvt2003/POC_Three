@@ -13,10 +13,21 @@ import { useUiStore } from '../uiStore'
 export function Step3Openings() {
   const walls = useDesignStore((s) => s.doc.walls)
   const selectedId = useDesignStore((s) => s.selectedId)
-  const armedStyleId = useUiStore((s) => s.armedStyleId)
-  const setArmedStyle = useUiStore((s) => s.setArmedStyle)
+  const addOpeningAuto = useDesignStore((s) => s.addOpeningAuto)
+  const select = useDesignStore((s) => s.select)
 
+  const [full, setFull] = useState(false)
   const selected = walls.flatMap((w) => w.openings).find((o) => o.id === selectedId)
+
+  /**
+   * Bấm một kiểu là cửa RƠI VÀO PHÒNG NGAY, không phải ngắm rồi bấm lên tường.
+   * Chỗ đặt là khoảng trống rộng nhất còn lại; kéo đi đâu thì kéo sau.
+   */
+  function place(style: OpeningStyle) {
+    const id = addOpeningAuto(style.id)
+    setFull(id === null)
+    if (id) select(id)
+  }
 
   return (
     <>
@@ -24,39 +35,37 @@ export function Step3Openings() {
         <SelectedOpening opening={selected} />
       ) : (
         <p className="note">
-          {armedStyleId
-            ? 'Bấm lên MẶT TRONG của tường để đặt. Bấm lại vào kiểu đang chọn để bỏ.'
-            : 'Chọn một kiểu bên dưới, rồi bấm lên tường.'}
+          Bấm một kiểu bên dưới — cửa hiện ra ngay trong phòng. Sau đó kéo nó trượt dọc tường,
+          vòng qua góc sang tường khác cũng được.
+        </p>
+      )}
+
+      {full && (
+        <p className="note is-warn">
+          Không còn tường nào đủ chỗ cho kiểu đó. Xoá bớt cửa hoặc kéo tường cho dài ra.
         </p>
       )}
 
       <h3>Kiểu cửa đi</h3>
-      <StyleGrid list={DOOR_STYLES} armed={armedStyleId} onPick={setArmedStyle} />
+      <StyleGrid list={DOOR_STYLES} onPick={place} />
 
       <h3>Kiểu cửa sổ</h3>
-      <StyleGrid list={WINDOW_STYLES} armed={armedStyleId} onPick={setArmedStyle} />
+      <StyleGrid list={WINDOW_STYLES} onPick={place} />
     </>
   )
 }
 
 function StyleGrid({
   list,
-  armed,
   onPick,
 }: {
   list: OpeningStyle[]
-  armed: string | null
-  onPick: (id: string | null) => void
+  onPick: (style: OpeningStyle) => void
 }) {
   return (
     <div className="style-grid">
       {list.map((s) => (
-        <button
-          key={s.id}
-          className={'style-card' + (s.id === armed ? ' is-on' : '')}
-          // Bấm lại vào kiểu đang chọn thì hạ nòng — khỏi phải tìm nút "huỷ"
-          onClick={() => onPick(s.id === armed ? null : s.id)}
-        >
+        <button key={s.id} className="style-card" onClick={() => onPick(s)}>
           <StyleThumb style={s} />
           <span>{s.name}</span>
         </button>
@@ -66,38 +75,64 @@ function StyleGrid({
 }
 
 /**
- * Thumbnail vẽ bằng SVG sinh từ chính tham số của kiểu.
+ * Thumbnail vẽ bằng SVG sinh từ chính tham số của kiểu — khung bao, nẹp chia ô,
+ * kính hay cánh đặc, tay nắm, và cả bệ dưới của cửa sổ.
+ *
  * Thêm kiểu mới trong `openings.ts` là thumbnail tự có, không phải làm ảnh.
+ * Tỉ lệ ngang/dọc lấy đúng `width`/`height` thật, nên nhìn ảnh là đoán được
+ * cửa nào rộng cửa nào hẹp.
  */
 function StyleThumb({ style }: { style: OpeningStyle }) {
-  const W = 34
-  const H = 46
-  const pad = 3
-  const iw = W - pad * 2
-  const ih = H - pad * 2
+  const BOX_W = 40
+  const BOX_H = 48
+  const F = 2.2 // bề dày khung, quy ra pixel thumbnail
 
-  const lines = []
+  // Giữ đúng tỉ lệ thật, vừa trong khung BOX_W × BOX_H
+  const ratio = style.width / style.height
+  const h = Math.min(BOX_H, BOX_W / ratio)
+  const w = h * ratio
+  const x = (BOX_W - w) / 2
+  // Cửa đi đứng trên sàn, cửa sổ treo lơ lửng — vẽ đúng như vậy cho dễ phân biệt
+  const y = style.kind === 'door' ? BOX_H - h : (BOX_H - h) / 2
+
+  const ix = x + F
+  const iy = y + F
+  const iw = w - F * 2
+  const ih = h - F * 2
+
+  const bars = []
   for (let i = 1; i < style.cols; i++) {
-    const x = pad + (iw * i) / style.cols
-    lines.push(<line key={`v${i}`} x1={x} y1={pad} x2={x} y2={H - pad} />)
+    const bx = ix + (iw * i) / style.cols
+    bars.push(<line key={`v${i}`} x1={bx} y1={iy} x2={bx} y2={iy + ih} />)
   }
   for (let i = 1; i < style.rows; i++) {
-    const y = pad + (ih * i) / style.rows
-    lines.push(<line key={`h${i}`} x1={pad} y1={y} x2={W - pad} y2={y} />)
+    const by = iy + (ih * i) / style.rows
+    bars.push(<line key={`h${i}`} x1={ix} y1={by} x2={ix + iw} y2={by} />)
   }
 
+  const knobs = style.leaves === 2 ? [x + w / 2 - 3.4, x + w / 2 + 3.4] : [x + w - F - 3.4]
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="style-thumb">
+    <svg viewBox={`0 0 ${BOX_W} ${BOX_H}`} width={BOX_W} height={BOX_H} className="style-thumb">
+      {/* Mảng tường quanh lỗ, cho thấy cửa nằm trên tường chứ không lơ lửng */}
+      <rect x={0} y={0} width={BOX_W} height={BOX_H} className="thumb-wall" />
+      <rect x={x} y={y} width={w} height={h} className="thumb-frame" />
       <rect
-        x={pad}
-        y={pad}
+        x={ix}
+        y={iy}
         width={iw}
         height={ih}
         className={style.glass ? 'pane-glass' : 'pane-solid'}
       />
-      <g className="pane-mullion">{lines}</g>
+      <g className="pane-mullion">{bars}</g>
       {style.leaves === 2 && (
-        <line x1={W / 2} y1={pad} x2={W / 2} y2={H - pad} className="pane-stile" />
+        <line x1={x + w / 2} y1={iy} x2={x + w / 2} y2={iy + ih} className="pane-stile" />
+      )}
+      {style.kind === 'door' &&
+        knobs.map((kx) => <circle key={kx} cx={kx} cy={y + h * 0.55} r={1.2} className="thumb-knob" />)}
+      {/* Bệ cửa sổ */}
+      {style.kind === 'window' && (
+        <rect x={x - 1.5} y={y + h} width={w + 3} height={1.8} className="thumb-frame" />
       )}
     </svg>
   )
@@ -127,6 +162,8 @@ function SelectedOpening({ opening }: { opening: Opening }) {
           Xoá
         </button>
       </div>
+
+      <p className="note">Kéo thẳng cái cửa trong khung 3D để trượt dọc tường.</p>
 
       <NumberField
         label="Rộng"

@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { useCanEditItems } from '../../ui/uiStore'
 import { useDesignStore } from '../store/designStore'
 import { Item } from './Item'
 
@@ -19,10 +20,23 @@ function ItemList() {
   const selectedId = useDesignStore((s) => s.selectedId)
   const select = useDesignStore((s) => s.select)
 
+  /*
+    Ngoài tab "Nội thất" thì đồ đạc chỉ để NGẮM: không chọn, không kéo, không
+    hiện thanh công cụ. Đang chỉnh mặt bằng hay đổi màu sàn mà lỡ tay kéo trúng
+    cái ghế thì vừa mất bố cục vừa đẻ ra một bước undo vô nghĩa.
+  */
+  const editable = useCanEditItems()
+
   return (
     <group name="items">
       {items.map((it) => (
-        <Item key={it.id} item={it} selected={it.id === selectedId} onSelect={select} />
+        <Item
+          key={it.id}
+          item={it}
+          selected={editable && it.id === selectedId}
+          interactive={editable}
+          onSelect={select}
+        />
       ))}
     </group>
   )

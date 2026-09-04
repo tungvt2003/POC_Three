@@ -764,3 +764,307 @@ body {
   font-size: 11px;
   color: #8a8a99;
 }
+
+
+/* ---------- nhóm danh mục nội thất ---------- */
+
+.cat {
+  margin-bottom: 6px;
+}
+
+.cat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  background: #24242b;
+  color: #cfcfda;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cat-head.is-on {
+  border-color: #d8a53c;
+  background: #2f2a20;
+  color: #f0c76a;
+}
+
+.cat-head em {
+  font-style: normal;
+  font-size: 11px;
+  color: #8a8a99;
+}
+
+.cat .rows {
+  margin: 6px 0 10px;
+}
+
+/* Chấm màu mặc định của sản phẩm, cho biết trước món đó tông gì */
+.row-dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  margin-right: 8px;
+  border-radius: 999px;
+  outline: 1px solid #00000055;
+}
+
+/* ---------- chọn sàn có ảnh mẫu ---------- */
+
+.swatch-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swatch-reset {
+  background: #24242b;
+  color: #b9b9c6;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.custom-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #8a8a99;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.custom-color input {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #4a4a55;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.floor-group-name {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8a99;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.floor-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 3px;
+  border: 1px solid #3a3a42;
+  border-radius: 9px;
+  background: #24242b;
+  color: #b9b9c6;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+
+.floor-card img {
+  border-radius: 6px;
+  image-rendering: auto;
+}
+
+.floor-card:hover {
+  background: #2e2e37;
+}
+
+.floor-card.is-on {
+  border-color: #d8a53c;
+  background: #2f2a20;
+  color: #f0c76a;
+}
+
+/* ---------- thumbnail cửa: vẽ ra hình cửa thật ---------- */
+
+.thumb-wall {
+  fill: #33333c;
+}
+
+.thumb-frame {
+  fill: #d9d4c9;
+  stroke: #6a6a76;
+  stroke-width: 0.8;
+}
+
+.thumb-knob {
+  fill: #8c8c94;
+}
+
+.note.is-warn {
+  color: #f0a08a;
+}
+
+/* ---------- nút & thanh công cụ nổi TRONG cảnh 3D ---------- */
+
+.scene-trash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: #1d1d24;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+}
+
+.scene-trash:hover {
+  background: #b93b32;
+}
+
+.scene-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.tool-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #23232b;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 0.4);
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 56px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: #d3d3de;
+  font-size: 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tool-btn:hover {
+  background: #34343f;
+}
+
+.tool-btn.is-on {
+  background: #3d3524;
+  color: #f0c76a;
+}
+
+.tool-btn.is-danger:hover {
+  background: #7d2f28;
+  color: #fff;
+}
+
+.tool-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.tool-pop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: #23232b;
+  color: #eee;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 0.4);
+}
+
+.tool-pop b {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #f0c76a;
+}
+
+.tool-pop input[type='range'] {
+  width: 190px;
+  accent-color: #d8a53c;
+}
+
+.tool-quick {
+  display: flex;
+  gap: 4px;
+}
+
+.tool-quick button {
+  padding: 3px 8px;
+  border: 1px solid #3f3f4a;
+  border-radius: 6px;
+  background: #2c2c35;
+  color: #cfcfda;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.tool-quick button:hover {
+  background: #3a3a46;
+}
+
+.tool-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 200px;
+}
+
+.tool-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  outline: 1px solid #00000066;
+  cursor: pointer;
+}
+
+.tool-swatch.is-on {
+  border-color: #f0c76a;
+}
+
+.tool-swatch.is-reset {
+  background: #2c2c35;
+  color: #cfcfda;
+  font-size: 12px;
+  line-height: 1;
+}
+
+
+/* Tab Phòng / Nội thất của chế độ thiết kế */
+.seg.tabs {
+  margin-top: 14px;
+}
+
+.seg.tabs button {
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+}

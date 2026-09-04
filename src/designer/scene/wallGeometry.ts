@@ -247,6 +247,32 @@ function op(id: string, t: number, elevation: number, width: number, height: num
   }
 }
 
+/**
+ * Điểm world (MÉT) trên mặt trong tường, tại `t` dọc tường và cao độ `yMm`,
+ * nhấc ra khỏi mặt tường `liftMm` theo pháp tuyến trong.
+ *
+ * Dùng để đặt mũi tên, nhãn đo, nút xoá — mọi thứ bám theo tường.
+ */
+export function pointOnWall(
+  wall: Wall,
+  t: number,
+  yMm: number,
+  liftMm = 0,
+): [number, number, number] {
+  const p = innerAt(wall, t)
+  return [
+    mm2m(p.x + wall.innerNormal.x * liftMm),
+    mm2m(yMm),
+    mm2m(p.z + wall.innerNormal.z * liftMm),
+  ]
+}
+
+/** Góc quay quanh trục Y để mặt phẳng ngửa về phía TRONG phòng. */
+export function wallFacingY(wall: Wall): number {
+  // Ry(θ) đưa (0,0,1) -> (sinθ, 0, cosθ), nên θ = atan2(n.x, n.z).
+  return Math.atan2(wall.innerNormal.x, wall.innerNormal.z)
+}
+
 /** Vị trí `t` dọc tường của một điểm world. Dùng khi bấm chuột lên tường. */
 export function tAlongWall(wall: Wall, x: number, z: number): number {
   const d = unitDir(wall)

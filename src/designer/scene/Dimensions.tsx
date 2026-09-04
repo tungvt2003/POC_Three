@@ -1,7 +1,7 @@
 import { Html, Line } from '@react-three/drei'
 import { useMemo } from 'react'
 import { fmtMm, mm2m } from '../../lib/units'
-import { useUiStore } from '../../ui/uiStore'
+import { useCanEditItems, useUiStore } from '../../ui/uiStore'
 import { productById } from '../catalog/products'
 import { NARROW, itemFootprint, measureClearances } from '../controls/clearance'
 import { useDesignStore } from '../store/designStore'
@@ -23,7 +23,10 @@ export function Dimensions() {
   const selectedId = useDesignStore((s) => s.selectedId)
   const unit = useUiStore((s) => s.unit)
 
-  const item = items.find((it) => it.id === selectedId)
+  // Ngoài tab "Nội thất" thì đồ đạc không chọn được, đường đo cũng không có
+  // lý do gì để hiện.
+  const editable = useCanEditItems()
+  const item = editable ? items.find((it) => it.id === selectedId) : undefined
 
   const clearances = useMemo(() => {
     if (!item) return []

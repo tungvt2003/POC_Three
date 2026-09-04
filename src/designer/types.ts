@@ -61,4 +61,9 @@ export type Item = {
   position: Point // mm, y luôn = 0 (đứng trên sàn)
   rotationY: number // radian
   placement: 'floor' | 'rug' | 'wall'
+  /**
+   * Màu người dùng chọn, đè lên màu gốc. Bỏ trống = giữ nguyên vật liệu của
+   * model. Chỉ là màu, KHÔNG phải mã biến thể sản phẩm — POC không làm SKU.
+   */
+  color?: string
 }

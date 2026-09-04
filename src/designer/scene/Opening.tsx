@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import type { BufferGeometry } from 'three'
 import { MULLION, mullionBars, styleById } from '../catalog/openings'
+import { useDragOpening } from '../controls/useDragOpening'
 import type { Opening as OpeningData, Wall } from '../types'
-import { openingQuad, slabGeometry } from './wallGeometry'
+import { OpeningGizmo } from './OpeningGizmo'
+import { openingQuad, pointOnWall, slabGeometry } from './wallGeometry'
 
 /** mm. Bề dày khung bao quanh ô. */
 const FRAME = 60
@@ -17,6 +19,11 @@ type Props = {
   selected: boolean
   onSelect?: (id: string) => void
 }
+
+/** Màu cánh cửa gỗ và khung — cố định, KHÔNG đổi theo trạng thái chọn. */
+const FRAME_COLOR = '#f2efe9'
+const PANEL_COLOR = '#e6e1d8'
+const GLASS_COLOR = '#bcd4dd'
 
 /**
  * Cửa đi / cửa sổ dựng bằng code, không load model.
@@ -112,20 +119,25 @@ export function Opening({ wall, opening, selected, onSelect }: Props) {
     [parts],
   )
 
-  const frameColor = selected ? '#f0b429' : '#f2efe9'
-  const panelColor = selected ? '#f0b429' : '#e6e1d8'
-
-  function handleDown(e: { stopPropagation: () => void }) {
-    if (!onSelect) return
-    e.stopPropagation() // đừng để click lọt xuống tường mà đặt thêm cửa mới
-    onSelect(opening.id)
-  }
+  /*
+    Chọn cửa thì KHÔNG bôi vàng cả cánh nữa — cửa phải trông ra cửa. Việc báo
+    "đang chọn" giao cho `OpeningGizmo`: viền vàng ôm quanh lỗ, kèm mũi tên và
+    đường đo.
+  */
+  const drag = useDragOpening(opening, onSelect ?? noop)
 
   return (
-    <group name={opening.id} onPointerDown={onSelect ? handleDown : undefined}>
+    <group
+      name={opening.id}
+      onPointerDown={onSelect ? drag.onPointerDown : undefined}
+      onPointerOver={
+        onSelect ? () => (document.body.style.cursor = drag.dragging ? 'grabbing' : 'grab') : undefined
+      }
+      onPointerOut={onSelect ? () => (document.body.style.cursor = '') : undefined}
+    >
       {parts.solid.map((geo, i) => (
         <mesh key={i} geometry={geo} castShadow receiveShadow>
-          <meshStandardMaterial color={frameColor} roughness={0.6} transparent opacity={1} />
+          <meshStandardMaterial color={FRAME_COLOR} roughness={0.6} transparent opacity={1} />
         </mesh>
       ))}
 
@@ -138,18 +150,60 @@ export function Opening({ wall, opening, selected, onSelect }: Props) {
             nếu D12 đo thấy FPS còn dư thì nâng cấp sau.
           */
           <meshStandardMaterial
-            color={selected ? '#f0b429' : '#bcd4dd'}
+            color={GLASS_COLOR}
             roughness={0.08}
             metalness={0.1}
             transparent
-            opacity={selected ? 0.55 : 0.34}
+            opacity={0.34}
           />
         ) : (
-          <meshStandardMaterial color={panelColor} roughness={0.55} transparent opacity={1} />
+          <meshStandardMaterial color={PANEL_COLOR} roughness={0.55} transparent opacity={1} />
         )}
       </mesh>
+
+      {/* Tay nắm — chi tiết nhỏ nhưng thiếu nó thì cánh cửa chỉ là tấm ván */}
+      {opening.kind === 'door' && <Handle wall={wall} opening={opening} style={style} />}
+
+      {selected && onSelect && <OpeningGizmo wall={wall} opening={opening} />}
     </group>
   )
 }
+
+/**
+ * Tay nắm tròn, đặt ở mép MỞ của cánh (phía đối diện bản lề).
+ * Cửa 2 cánh thì hai tay nắm quay lưng vào nhau ở giữa.
+ */
+function Handle({
+  wall,
+  opening,
+  style,
+}: {
+  wall: Wall
+  opening: OpeningData
+  style: ReturnType<typeof styleById>
+}) {
+  const y = opening.elevation + Math.min(1050, opening.height * 0.45)
+  const inset = 110
+  const spots =
+    style.leaves === 2
+      ? [opening.t + opening.width / 2 - inset, opening.t + opening.width / 2 + inset]
+      : [opening.t + opening.width - inset]
+
+  return (
+    <>
+      {spots.map((t) => (
+        <mesh key={t} position={pointOnWall(wall, t, y, HANDLE_LIFT)} raycast={() => null}>
+          <sphereGeometry args={[0.026, 12, 10]} />
+          <meshStandardMaterial color="#8c8c94" roughness={0.3} metalness={0.75} transparent />
+        </mesh>
+      ))}
+    </>
+  )
+}
+
+/** mm. Tay nắm nhô ra khỏi MẶT TRONG của cánh cửa. */
+const HANDLE_LIFT = -6
+
+function noop() {}
 
 export { FRAME, MULLION }

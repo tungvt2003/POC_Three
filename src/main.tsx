@@ -6,6 +6,7 @@ import { selfCheckWalls } from './designer/scene/buildWalls'
 import { selfCheckCeilingLights } from './designer/scene/ceilingLightGrid'
 import { selfCheckCameraPresets } from './designer/controls/cameraPresets'
 import { selfCheckClearance } from './designer/controls/clearance'
+import { selfCheckContain } from './designer/controls/containItem'
 import { selfCheckSnap } from './designer/controls/snapToWall'
 import { selfCheckWallGeometry } from './designer/scene/wallGeometry'
 import { useDesignStore } from './designer/store/designStore'
@@ -24,6 +25,7 @@ if (import.meta.env.DEV) {
   selfCheckSnap()
   selfCheckCameraPresets()
   selfCheckClearance()
+  selfCheckContain()
   // Mở console gõ `__store.getState()` / `__ui.getState()` để soi state. Chỉ có khi DEV.
   Object.assign(window, { __store: useDesignStore, __ui: useUiStore })
 }

@@ -1,9 +1,9 @@
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { MathUtils, type Group, type Material, type Mesh, Vector3 } from 'three'
 import type { Wall as WallData } from '../types'
 import { Opening } from './Opening'
-import { buildWallGeometry, isInnerFace, tAlongWall } from './wallGeometry'
+import { buildWallGeometry } from './wallGeometry'
 
 /**
  * Tường quay lưng về phía camera thì mờ đi.
@@ -20,14 +20,10 @@ type Props = {
   wall: WallData
   height: number // mm, cao trần
   color: string
-  /** Bước 3 mới bật. Ngoài ra tường không ăn sự kiện chuột. */
+  /** Cho phép chọn và kéo cửa trên tường này. */
   interactive?: boolean
   selectedOpeningId?: string | null
   onSelectOpening?: (id: string) => void
-  /** Bấm lên MẶT TRONG tường. `t` là vị trí dọc tường, mm. */
-  onPlace?: (wallId: string, t: number) => void
-  /** Rê chuột trên mặt trong tường. `t === null` là đã rời khỏi tường. */
-  onHover?: (wallId: string, t: number | null) => void
   /** Tắt hẳn việc ẩn tường (Bước 1–2 nhìn từ trên xuống thì không cần). */
   fade?: boolean
 }
@@ -47,8 +43,6 @@ export function Wall({
   interactive = false,
   selectedOpeningId = null,
   onSelectOpening,
-  onPlace,
-  onHover,
   fade = true,
 }: Props) {
   const geometry = useMemo(() => buildWallGeometry(wall, height), [wall, height])
@@ -83,39 +77,9 @@ export function Wall({
     applyOpacity(group, opacity.current)
   })
 
-  /** Chỉ nhận sự kiện khi trúng MẶT TRONG tường, trả về `t` dọc tường. */
-  function hitT(e: ThreeEvent<PointerEvent>): number | null {
-    const n = e.face?.normal
-    if (!n || !isInnerFace(wall, n.x, n.y, n.z)) return null
-    return tAlongWall(wall, e.point.x * 1000, e.point.z * 1000)
-  }
-
   return (
     <group name={wall.id} ref={groupRef}>
-      <mesh
-        geometry={geometry}
-        castShadow
-        receiveShadow
-        onPointerDown={
-          interactive && onPlace
-            ? (e) => {
-                const t = hitT(e)
-                if (t === null) return
-                e.stopPropagation()
-                onPlace(wall.id, t)
-              }
-            : undefined
-        }
-        onPointerMove={
-          interactive && onHover
-            ? (e) => {
-                const t = hitT(e)
-                onHover(wall.id, t)
-              }
-            : undefined
-        }
-        onPointerOut={interactive && onHover ? () => onHover(wall.id, null) : undefined}
-      >
+      <mesh geometry={geometry} castShadow receiveShadow>
         {/*
           transparent BẬT SẴN từ đầu dù opacity=1.
           Đổi cờ này lúc runtime làm three.js biên dịch lại shader -> khựng hình.

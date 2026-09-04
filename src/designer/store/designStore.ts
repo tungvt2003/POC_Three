@@ -3,7 +3,10 @@ import { immer } from 'zustand/middleware/immer'
 import { buildFootprint, carryParams, clampLine, shapeById, type ShapeId } from '../catalog/shapes'
 import { makeId } from '../../lib/id'
 import { bounds, type Point } from '../../lib/polygon'
+import { styleById } from '../catalog/openings'
 import { productById } from '../catalog/products'
+import { containInRoom } from '../controls/containItem'
+import { clampT, findSlot } from '../controls/placeOpening'
 import { buildWalls, wallLength } from '../scene/buildWalls'
 import type { Item, Opening, Room, Wall } from '../types'
 
@@ -68,12 +71,27 @@ type DesignState = {
    * khác hoặc không đủ chỗ). Một phát ăn ngay, có undo.
    */
   addOpening: (wallId: string, spec: OpeningSpec) => string | null
+  /**
+   * Thả một cửa/cửa sổ vào phòng NGAY, tự tìm chỗ trống rộng nhất.
+   * Bấm kiểu cửa là thấy nó trong phòng luôn, kéo đi sau.
+   */
+  addOpeningAuto: (styleId: string) => string | null
   removeOpening: (openingId: string) => void
   /** Sửa lỗ đang có. Bị từ chối nếu kích thước mới đè lên lỗ khác. */
   updateOpening: (openingId: string, patch: Partial<OpeningSpec>) => void
+  /**
+   * Trượt lỗ dọc tường, hoặc sang HẲN bức tường khác khi kéo vòng qua góc.
+   * `elevation` bỏ trống = giữ nguyên cao độ (cửa đi luôn đứng trên sàn).
+   * Kiểu "live" — kéo bao nhiêu cũng chỉ 1 bước undo, nhớ `endEdit()` lúc nhả.
+   */
+  moveOpening: (openingId: string, wallId: string, t: number, elevation?: number) => void
 
   /** Thêm một món nội thất vào giữa phòng. Trả id vừa tạo. */
   addItem: (productId: string) => string
+  /** Nhân bản món đang có, đặt lệch sang bên một chút. Trả id bản sao. */
+  duplicateItem: (itemId: string) => string | null
+  /** Đổi màu một món. `null` = trả về màu gốc của model. */
+  setItemColor: (itemId: string, color: string | null) => void
   removeItem: (itemId: string) => void
   /** Xoay quanh trục đứng, cộng dồn theo radian. Một phát ăn ngay (nút bấm). */
   rotateItem: (itemId: string, deltaRad: number) => void
@@ -208,6 +226,58 @@ export const useDesignStore = create<DesignState>()(
       return id
     },
 
+    addOpeningAuto: (styleId) => {
+      const style = styleById(styleId)
+      const slot = findSlot(get().doc.walls, style.width)
+      if (!slot) return null
+
+      return get().addOpening(slot.wallId, {
+        styleId: style.id,
+        t: slot.t,
+        width: style.width,
+        height: style.height,
+        elevation: style.elevation,
+        kind: style.kind,
+      })
+    },
+
+    moveOpening: (openingId, wallId, t, elevation) => {
+      const before = get().doc
+      const from = before.walls.find((w) => w.openings.some((o) => o.id === openingId))
+      const to = before.walls.find((w) => w.id === wallId)
+      if (!from || !to) return
+
+      const opening = from.openings.find((o) => o.id === openingId)!
+      const next = clampT(to, opening.width, t, openingId)
+      // Không lách được thì GIỮ NGUYÊN chỗ cũ, đừng nhảy lung tung.
+      if (next === null) return
+
+      // Mép trên không được chọc thủng trần, mép dưới không được lún xuống sàn.
+      const maxElevation = Math.max(0, before.room.height - opening.height)
+      const nextElevation =
+        elevation === undefined
+          ? opening.elevation
+          : Math.min(Math.max(Math.round(elevation), 0), maxElevation)
+
+      if (from.id === to.id && next === opening.t && nextElevation === opening.elevation) return
+
+      set((s) => {
+        if (!s.pending) s.pending = before
+        const src = s.doc.walls.find((w) => w.id === from.id)!
+        const dst = s.doc.walls.find((w) => w.id === to.id)!
+
+        if (src.id === dst.id) {
+          const it = dst.openings.find((o) => o.id === openingId)!
+          it.t = next
+          it.elevation = nextElevation
+        } else {
+          src.openings = src.openings.filter((o) => o.id !== openingId)
+          dst.openings.push({ ...opening, wallId: dst.id, t: next, elevation: nextElevation })
+        }
+        dst.openings.sort((a, b) => a.t - b.t)
+      })
+    },
+
     updateOpening: (openingId, patch) => {
       const before = get().doc
       const wall = before.walls.find((w) => w.openings.some((o) => o.id === openingId))
@@ -269,6 +339,40 @@ export const useDesignStore = create<DesignState>()(
       return id
     },
 
+    duplicateItem: (itemId) => {
+      const before = get().doc
+      const src = before.items.find((it) => it.id === itemId)
+      if (!src) return null
+
+      const id = makeId('item')
+      set((s) => {
+        if (!s.pending) s.pending = before
+        // Lệch sang bên 300mm cho thấy là có hai món, không phải một món.
+        // Ra ngoài phòng cũng không sao — kéo lại vào là hàng snap lo tiếp.
+        const copy = {
+          ...src,
+          id,
+          position: { x: src.position.x + 300, z: src.position.z + 300 },
+        }
+        s.doc.items.push(copy)
+        keepInside(s.doc, s.doc.items[s.doc.items.length - 1])
+      })
+      get().endEdit()
+      return id
+    },
+
+    setItemColor: (itemId, color) => {
+      const before = get().doc
+      set((s) => {
+        if (!s.pending) s.pending = before
+        const it = s.doc.items.find((x) => x.id === itemId)
+        if (!it) return
+        if (color === null) delete it.color
+        else it.color = color
+      })
+      get().endEdit()
+    },
+
     removeItem: (itemId) => {
       const before = get().doc
       if (!before.items.some((it) => it.id === itemId)) return
@@ -286,7 +390,9 @@ export const useDesignStore = create<DesignState>()(
       set((s) => {
         if (!s.pending) s.pending = before
         const it = s.doc.items.find((x) => x.id === itemId)
-        if (it) it.rotationY += deltaRad
+        if (!it) return
+        it.rotationY += deltaRad
+        keepInside(s.doc, it)
       })
       get().endEdit()
     },
@@ -296,7 +402,9 @@ export const useDesignStore = create<DesignState>()(
       set((s) => {
         if (!s.pending) s.pending = before
         const it = s.doc.items.find((x) => x.id === itemId)
-        if (it) it.rotationY = rad
+        if (!it) return
+        it.rotationY = rad
+        keepInside(s.doc, it)
       })
     },
 
@@ -305,7 +413,9 @@ export const useDesignStore = create<DesignState>()(
       set((s) => {
         if (!s.pending) s.pending = before
         const it = s.doc.items.find((x) => x.id === itemId)
-        if (it) it.position = { x: worldPosMm.x, z: worldPosMm.z }
+        if (!it) return
+        it.position = { x: worldPosMm.x, z: worldPosMm.z }
+        keepInside(s.doc, it)
       })
     },
 
@@ -393,6 +503,25 @@ function clampOpeningT(wall: Wall, spec: OpeningSpec): number | null {
   const t = Math.min(Math.max(spec.t, 0), L - spec.width)
   const hits = wall.openings.some((o) => t < o.t + o.width && o.t < t + spec.width)
   return hits ? null : t
+}
+
+/**
+ * Kéo món đồ về cho CẢ KHỐI nằm trong phòng.
+ *
+ * Gọi ở STORE chứ không ở tầng kéo thả: xoay bằng nút bấm, xoay bằng thanh
+ * trượt, nhân bản — cái nào cũng đẩy được đồ ra ngoài nhà. Chặn ở một chỗ thì
+ * mọi đường vào đều an toàn.
+ */
+function keepInside(doc: Doc, item: Item): void {
+  const product = productById(item.productId)
+  const fixed = containInRoom(
+    item.position,
+    product.size.w,
+    product.size.d,
+    item.rotationY,
+    doc.room.footprint,
+  )
+  item.position = { x: fixed.x, z: fixed.z }
 }
 
 /**

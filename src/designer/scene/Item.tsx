@@ -4,6 +4,7 @@ import { mm2m } from '../../lib/units'
 import { productById } from '../catalog/products'
 import type { Item as ItemData } from '../types'
 import { GltfModel } from './GltfModel'
+import { ItemGizmo } from './ItemGizmo'
 import { ProxyModel } from './ProxyModel'
 
 /**
@@ -15,6 +16,8 @@ const RUG_LIFT = 1
 type Props = {
   item: ItemData
   selected: boolean
+  /** false = chỉ để ngắm: không bắt chuột, không thanh công cụ. */
+  interactive: boolean
   onSelect: (id: string) => void
 }
 
@@ -28,12 +31,13 @@ type Props = {
  * Chưa có model thật thì dựng khối tạm (`ProxyModel`). Điền `modelUrl` trong
  * `products.ts` là chuyển sang `useGLTF`, chỗ khác không phải sửa.
  */
-export function Item({ item, selected, onSelect }: Props) {
+export function Item({ item, selected, interactive, onSelect }: Props) {
   const product = productById(item.productId)
   const isRug = item.placement === 'rug'
 
   const { dragging, handlers } = useDragItem({
     item,
+    widthMm: product.size.w,
     depthMm: product.size.d,
     onSelect,
   })
@@ -44,16 +48,21 @@ export function Item({ item, selected, onSelect }: Props) {
         name={item.id}
         position={[mm2m(item.position.x), isRug ? mm2m(RUG_LIFT) : 0, mm2m(item.position.z)]}
         rotation={[0, item.rotationY, 0]}
-        onPointerOver={() => (document.body.style.cursor = dragging ? 'grabbing' : 'grab')}
-        onPointerOut={() => (document.body.style.cursor = '')}
-        {...handlers}
+        onPointerOver={
+          interactive ? () => (document.body.style.cursor = dragging ? 'grabbing' : 'grab') : undefined
+        }
+        onPointerOut={interactive ? () => (document.body.style.cursor = '') : undefined}
+        {...(interactive ? handlers : {})}
       >
         {/* Có `modelUrl` thì dùng model thật, chưa có thì khối tạm. */}
         {product.modelUrl ? (
-          <GltfModel url={product.modelUrl} />
+          <GltfModel url={product.modelUrl} tint={item.color} />
         ) : (
-          <ProxyModel product={product} rug={isRug} />
+          <ProxyModel product={product} rug={isRug} color={item.color} />
         )}
+
+        {/* Thanh công cụ nổi: xoay, đổi màu, nhân bản, xoá */}
+        {selected && <ItemGizmo item={item} />}
       </group>
     </Select>
   )
